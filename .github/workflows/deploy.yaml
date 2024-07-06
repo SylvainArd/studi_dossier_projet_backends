@@ -40,17 +40,21 @@ jobs:
         ECR_REPOSITORY: hello-world
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+    - name: Add SSH key
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key
+        chmod 600 private_key
 
     - name: Deploy to EC2
       env:
         ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
         ECR_REPOSITORY: hello-world
         IMAGE_TAG: ${{ github.sha }}
-        SSH_KEY_PATH: C:/Users/Sylvain/.ssh/my-key-pair
+        SSH_KEY_PATH: private_key
       run: |
-        echo $ECR_REGISTRY $ECR_REPOSITORY $IMAGE_TAG
         INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-instance-*" --query "Reservations[*].Instances[*].InstanceId" --output text)
         for INSTANCE_ID in $INSTANCE_IDS; do
           PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
