@@ -40,8 +40,8 @@ jobs:
         ECR_REPOSITORY: hello-world
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
 
     - name: Deploy to EC2
       env:
@@ -50,15 +50,13 @@ jobs:
         IMAGE_TAG: ${{ github.sha }}
         SSH_KEY_PATH: C:/Users/Sylvain/.ssh/my-key-pair
       run: |
+        echo $ECR_REGISTRY $ECR_REPOSITORY $IMAGE_TAG
         INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-instance-*" --query "Reservations[*].Instances[*].InstanceId" --output text)
         for INSTANCE_ID in $INSTANCE_IDS; do
           PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
           echo "Connecting to $PUBLIC_IP"
-          ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" ec2-user@$PUBLIC_IP << EOF
-          sudo docker login --username AWS --password-stdin $ECR_REGISTRY <<< $(aws ecr get-login-password --region us-east-1)
-          sudo docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          sudo docker run -d -p 80:8080 $ECR_REGISTRY/$ECR_REPOSITORY:latest
-EOF
+          scp -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" deploy.sh ec2-user@$PUBLIC_IP:/home/ec2-user/deploy.sh
+          ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" ec2-user@$PUBLIC_IP "bash /home/ec2-user/deploy.sh $ECR_REGISTRY $ECR_REPOSITORY $IMAGE_TAG"
         done
 
   test:
