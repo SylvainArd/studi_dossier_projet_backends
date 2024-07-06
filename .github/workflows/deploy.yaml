@@ -40,8 +40,24 @@ jobs:
         ECR_REPOSITORY: hello-world
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker build -t $ECR_REGISTRY/hello-world:latest .
+        docker push $ECR_REGISTRY/hello-world:latest
+
+    - name: Deploy to EC2
+      env:
+        ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+        ECR_REPOSITORY: hello-world
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-instance-*" --query "Reservations[*].Instances[*].InstanceId" --output text)
+        for INSTANCE_ID in $INSTANCE_IDS; do
+          PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
+          ssh -o StrictHostKeyChecking=no -i C:\Users\Sylvain\.ssh\my-key-pair  ec2-user@$PUBLIC_IP << 'EOF'
+            aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin $ECR_REGISTRY
+            sudo docker pull $ECR_REGISTRY/hello-world:latest
+            sudo docker run -d -p 80:8080 $ECR_REGISTRY/hello-world:latest
+EOF
+        done
 
   test:
     runs-on: ubuntu-latest
