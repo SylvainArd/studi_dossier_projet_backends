@@ -48,16 +48,16 @@ jobs:
         ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
         ECR_REPOSITORY: hello-world
         IMAGE_TAG: ${{ github.sha }}
-        SSH_KEY_PATH: /path/to/your-key.pem
+        SSH_KEY_PATH: C:/Users/Sylvain/.ssh/my-key-pair
       run: |
         INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-instance-*" --query "Reservations[*].Instances[*].InstanceId" --output text)
         for INSTANCE_ID in $INSTANCE_IDS; do
           PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
           echo "Connecting to $PUBLIC_IP"
-          ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" ec2-user@$PUBLIC_IP <<'EOF'
-            aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin $ECR_REGISTRY
-            sudo docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest
-            sudo docker run -d -p 80:8080 $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" ec2-user@$PUBLIC_IP << EOF
+          sudo docker login --username AWS --password-stdin $ECR_REGISTRY <<< $(aws ecr get-login-password --region us-east-1)
+          sudo docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          sudo docker run -d -p 80:8080 $ECR_REGISTRY/$ECR_REPOSITORY:latest
 EOF
         done
 
