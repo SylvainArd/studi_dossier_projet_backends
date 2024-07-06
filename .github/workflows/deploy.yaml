@@ -56,9 +56,14 @@ jobs:
         SSH_KEY_PATH: ./private_key
       run: |
         INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-instance-*" --query "Reservations[*].Instances[*].InstanceId" --output text)
+        echo "Instance IDs: $INSTANCE_IDS"
         for INSTANCE_ID in $INSTANCE_IDS; do
           PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
           echo "Connecting to $PUBLIC_IP"
+          if [ -z "$PUBLIC_IP" ]; then
+            echo "No public IP found for instance $INSTANCE_ID"
+            exit 1
+          fi
           scp -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" deploy.sh ec2-user@$PUBLIC_IP:/home/ec2-user/deploy.sh
           ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_PATH" ec2-user@$PUBLIC_IP "bash /home/ec2-user/deploy.sh $ECR_REGISTRY $ECR_REPOSITORY $IMAGE_TAG"
         done
