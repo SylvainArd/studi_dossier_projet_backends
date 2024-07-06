@@ -58,8 +58,9 @@ jobs:
         INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-instance-*" --query "Reservations[*].Instances[*].InstanceId" --output text)
         echo "Instance IDs: $INSTANCE_IDS"
         for INSTANCE_ID in $INSTANCE_IDS; do
+          echo "Checking instance $INSTANCE_ID"
           PUBLIC_IP=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[*].Instances[*].PublicIpAddress" --output text)
-          echo "Connecting to $PUBLIC_IP"
+          echo "Public IP for instance $INSTANCE_ID: $PUBLIC_IP"
           if [ -z "$PUBLIC_IP" ]; then
             echo "No public IP found for instance $INSTANCE_ID"
             exit 1
