@@ -55,7 +55,7 @@ jobs:
         IMAGE_TAG: ${{ github.sha }}
         SSH_KEY_PATH: ./private_key
       run: |
-        INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-instance-*" --query "Reservations[*].Instances[*].InstanceId" --output text)
+        INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-instance-*" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].InstanceId" --output text)
         echo "Instance IDs: $INSTANCE_IDS"
         for INSTANCE_ID in $INSTANCE_IDS; do
           echo "Checking instance $INSTANCE_ID"
