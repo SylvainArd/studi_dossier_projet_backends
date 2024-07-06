@@ -53,7 +53,7 @@ jobs:
         ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
         ECR_REPOSITORY: hello-world
         IMAGE_TAG: ${{ github.sha }}
-        SSH_KEY_PATH: private_key
+        SSH_KEY_PATH: ./private_key
       run: |
         INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-instance-*" --query "Reservations[*].Instances[*].InstanceId" --output text)
         for INSTANCE_ID in $INSTANCE_IDS; do
